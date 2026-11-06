@@ -131,7 +131,13 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
       // the window, on the Overview
       const calls = { state: 0, overview: 0, requests: 0 }, cur = { v: 0 };
       const p = await open("http://magpie.test/?view=usage", { width: 1180, height: 760 }, calls, cur);
-      if (await p.locator("#usageTab .opt.on").evaluate((b) => b !== b.parentElement.firstElementChild)) await p.locator(":is(#usageTab .opt, .nav-s):visible").first().click();
+      // Sidebar setup can move the tabs while the page opens. Read the
+      // mounted selection atomically before testing focus refreshes.
+      const selected = await p.waitForFunction(() => {
+        const b = document.querySelector("#usageTab .opt.on");
+        return b?.parentElement ? { overview: b === b.parentElement.firstElementChild } : null;
+      }).then(h => h.jsonValue());
+      if (!selected.overview) await p.locator(":is(#usageTab .opt, .nav-s):visible").first().click();
       const BAR = "#chart .bars .bar";
       await p.locator(BAR).first().waitFor();
       assert.equal(await p.locator(BAR).count(), DAYS);
