@@ -68,7 +68,7 @@ async function settled(page) {
   return page.evaluate(() => new Promise((done) => {
     const read = () => JSON.stringify({
       list: Math.round(document.querySelector("#subscriptionUsage").getBoundingClientRect().height),
-      cards: [...document.querySelectorAll("#subscriptionUsage > .subscription-card")].map((c) => [c.dataset.key, Math.round(c.getBoundingClientRect().height)]),
+      cards: [...document.querySelectorAll("#subscriptionUsage > .subscription-card")].map((c) => [c.dataset.key, Math.round(c.getBoundingClientRect().height), [...c.querySelectorAll(".qc-plot")].map(p => Math.round(p.getBoundingClientRect().height))]),
     });
     let last = read(), still = 0;
     const tick = () => {
@@ -107,7 +107,11 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
           assert.equal(await curve.evaluate((e) => e.classList.contains("big")), true);
           const open = await settled(page);
           const h = (s) => s.cards.find(([k]) => k === key)[1];
-          assert.ok(h(open) > h(before) + 50, `${key}: the card grows with its curve: ${h(before)} → ${h(open)}`);
+          const plotHeight = s => s.cards.find(([k]) => k === key)[2][0];
+          // A last card stretched to the tallest column may already have
+          // room for the larger plot. The plot must grow in either case.
+          assert.ok(plotHeight(open) > plotHeight(before) + 50, `${key}: the plot grows: ${plotHeight(before)} → ${plotHeight(open)}`);
+          assert.ok(h(open) >= h(before), `${key}: enlarging never shrinks its card`);
           await curve.locator(".qc-plot").click();
           assert.equal(await curve.evaluate((e) => e.classList.contains("big")), false);
           const closed = await settled(page);

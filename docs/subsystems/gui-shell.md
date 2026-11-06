@@ -54,6 +54,78 @@ at once. Later openings reuse the settings and controls already loaded.
 `agent-details-ready.test.cjs` holds both responses and checks the final
 animation frame against the natural height in both engines and five languages.
 
+### Allowance card layout
+
+Overview's Allowances heading opens Layout, a local display preference
+(`plugins/usage/layout.js`). Minimum card width defaults to 360px; a slider
+chooses 280–560px in 20px steps, with Compact (280), Comfortable (360) and
+Spacious (440) presets. Changes preview immediately without redrawing the
+cards; committing the slider, choosing a preset or closing an unfinished
+edit keeps the numeric preference in localStorage
+(`magpie.usageCardMinWidth`). Other windows follow storage events. Invalid
+values use the default and are not overwritten just by opening the panel.
+The panel reports the actual packed columns and card width, which may be
+larger than the minimum. No gateway setting is written.
+
+`packUsage` in `app.js` and the fallback grid in `app.css` use that same
+minimum. Cards share the available width, preserving the existing packing,
+order and bottom alignment. A container narrower than the preference uses
+one column within its width. Long plan names can wrap within their card.
+The panel reuses `placeMenu` / `holdMenu`; Escape restores focus to Layout,
+and outside clicks, scrolling or window resizing dismiss it. Its observers
+are removed on dismissal. A delayed first module load opens the panel only
+while Layout still has focus and the active menu has not changed, so it
+cannot replace a menu opened later. `usage-card-width.test.cjs` covers both engines,
+five languages, 320/420/1100px, persistence, storage synchronization and
+invalid values; `usage-pack.test.cjs` exercises the existing packing rules
+with an explicitly chosen compact width.
+
+### Allowance chart windows
+
+An account's curve legend selects the allowance windows drawn together
+(`quotaCurveDraw` in [`quotacurve.js`](../../internal/gui/assets/quotacurve.js),
+loaded by `quotaCurve` in [`app.js`](../../internal/gui/assets/app.js)).
+Initially every recorded window is visible. Each legend button has
+`aria-pressed`; its original series index keeps its colour and colourblind
+dash when other windows are hidden. Hidden window names are kept per
+provider and account in localStorage (`magpie.quotaCurveHidden`). A refresh
+or reload keeps the choice, another account keeps its own, and a newly
+reported window starts visible. Hiding every window removes the plot and
+axis but leaves the legend to restore them.
+
+In Cycle, only visible windows determine the current time span and pace
+text. The explicit 2 days range and a recorded historical cycle retain
+their selected dates. The historical cycle picker and the account's
+meters still use the account's longest recorded window: hiding a curve
+does not change the historical snapshot. By default curves retain a common
+real time axis and each window's reference pace. Use actual time can be
+turned off per account (`magpie.quotaCurveRelative`, the account keys with
+the switch off). Each window's current cycle then fills the same plot
+width, with one diagonal reference from full to empty. The horizontal axis
+says Cycle start / Cycle end: equal positions mean equal cycle progress,
+not equal timestamps, and there is no shared now line. This mode shows
+only each window's current cycle even when the global range is 2 days;
+turning real time back on restores that range. A selected historical cycle
+uses its recorded bounds instead. Windows without recorded starts or valid
+ends are omitted with a notice, never given synthetic bounds. With fewer
+than two available legend entries, including in a historical snapshot, the
+switch is hidden and the plot uses actual time. A saved cycle-progress
+preference is retained for when multiple entries become available again.
+Selecting just one of several entries keeps the switch visible. Curves break
+at resets; tray sparks and balance curves are unaffected.
+
+The compact plot keeps its small scale without extra labels. Enlarging it
+adds percentage labels and each visible window's nearest actual sample,
+including its own timestamp. Pointer movement and touch inspect samples;
+Left/Right and Home/End inspect the ordered sample times (or cycle positions)
+from the keyboard; every reading still shows its original timestamp.
+No values are interpolated or extrapolated. On touch an enlarged plot stays
+open for inspection; Collapse closes it. Polling keeps an enlarged plot
+open for that page, and selection buttons restore keyboard focus without
+scrolling. `quota-curve-selection.test.cjs` covers both engines, all five
+languages, desktop and narrow widths; `quota-curve.test.cjs` covers recorded
+cycles, reset breaks and colourblind patterns.
+
 ### Allowance card refreshes
 
 A card refresh applies only the requested account from the API's full

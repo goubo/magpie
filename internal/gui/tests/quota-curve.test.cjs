@@ -291,7 +291,8 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
         // the range is picked once, in the allowances' head, not on every card
         const pick = page.locator("#quotaHead #quotaTrend");
         assert.equal(await pick.textContent(), w.trend(w.cycle), "Cycle first");
-        assert.equal(await page.locator(".quota-curve .segs, .quota-curve button:not(.qc-range), .quota-curve select").count(), 0, "only the account's cycle picker on a card");
+        assert.equal(await page.locator(".quota-curve .segs, .quota-curve button:not(.qc-range):not(.qc-key), .quota-curve select").count(), 0, "the range stays global; only cycle and window picks are on the card");
+        assert.deepEqual(await curve.locator("button.qc-key").evaluateAll(es => es.map(e => e.getAttribute("aria-pressed"))), ["true", "true"], "all recorded windows show until the reader chooses otherwise");
         assert.equal(await curve.locator(".qc-range").textContent(), w.cycle);
         // the window whose reset is furthest off, in words: a 52px plot
         // leaves the reader to work out which side of the dashes it is on,
@@ -315,8 +316,10 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
         assert.equal(strokes[theme], c1);
         const box = await card.boundingBox(), plot = await curve.locator(".qc-plot").boundingBox();
         assert.ok(plot.x >= box.x && plot.x + plot.width <= box.x + box.width + 0.5, "the plot fits its card");
-        const left = await curve.evaluate((e) => [...e.querySelectorAll("*")].filter((x) => parseFloat(getComputedStyle(x).borderLeftWidth) > 0).length);
-        assert.equal(left, 0, "no left borders");
+        // The scale checkbox keeps its control border; the chart itself
+        // still has no decorative left divider.
+        const left = await curve.evaluate((e) => [...e.querySelectorAll("*:not(input[type=checkbox])")].filter((x) => parseFloat(getComputedStyle(x).borderLeftWidth) > 0).length);
+        assert.equal(left, 0, "no decorative left borders");
 
         if (theme === "light") {
           // several accounts: the next one is set apart from a curve's legend

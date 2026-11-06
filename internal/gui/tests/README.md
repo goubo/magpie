@@ -1,5 +1,31 @@
 # Dropdown browser regression
 
+`usage-card-width.test.cjs` checks Overview's local Layout panel: the 360px
+default, slider and presets, real packed measurements, persistence, storage
+synchronization, invalid-value fallback and long-plan wrapping. Both
+engines, all five languages, 320/420/1100px; isolated API fixtures and no
+backend writes. `MAGPIE_LAYOUT_ASSETS` selects older assets for the failing
+regression comparison. Layout changes preserve enlarged allowance charts.
+
+`quota-curve-selection.test.cjs` selects allowance windows through the
+existing curve legend, checks that only selected windows determine the
+current-cycle axis, and preserves their colours, per-account choices and
+expanded state through refreshes. Expanded curves expose exact sampled
+readings with pointer and keyboard navigation; compact plots keep their
+small presentation. It covers Chromium and WebKit, all five languages,
+light and dark, desktop and narrow widths with isolated API fixtures.
+It also checks the default real time scale and the optional cycle progress
+scale: every window uses its complete cycle width with one reference line,
+while exact sample timestamps, historical meters, per-account scale choices
+and the original two-day range are preserved. Unknown cycle bounds never
+become made-up full cycles.
+The time-axis switch is hidden for a single available legend entry, even
+with a saved cycle-progress preference or in history. It returns when more
+entries are reported, retaining that preference; choosing one of several
+entries keeps the control visible.
+`MAGPIE_QUOTA_ASSETS` selects an older implementation for the failing
+regression comparison; `ARTIFACT_DIR` retains screenshots.
+
 `agent-details-ready.test.cjs` holds the first settings read and the lazy
 Long conversations module on the main window's Agents → Details path. It
 checks a complete first and warm opening without a final height jump in all

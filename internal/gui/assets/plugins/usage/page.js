@@ -3,6 +3,16 @@
 // first page.
 let usageHidOpen = false; // the hidden agents shown under their line
 
+$("#usageLayout").onclick = e => {
+  const anchor = e.currentTarget;
+  if (anchor.classList.contains("open")) return closeProtoMenu();
+  const menu = protoMenu;
+  anchor.focus(NO_SCROLL);
+  import("./layout.js").then(() => {
+    if (anchor.isConnected && anchor.offsetParent && document.activeElement === anchor && protoMenu === menu) openUsageLayout(anchor);
+  }, statusErr);
+};
+
 // What was read back from the archive, by "<date>/<id>": the archive's
 // copy, or {busy} while it is read, or {error}.
 const archivedCalls = new Map();
