@@ -16249,15 +16249,26 @@ function keyCards(list) {
   return gone.size ? list.filter((q) => !gone.has(q)).map((q) => merged.get(q) || q) : list;
 }
 
-// packUsage lays the Usage cards in 260px columns, the next card to the
+// packUsage lays the Usage cards in columns at least the chosen width, the next card to the
 // column that ends highest, the order still the page's (#860); each
 // column's last reaches the tallest's end (ikunbots on X).
-const USAGE_MIN = 260, USAGE_GAP = 7;
+const USAGE_GAP = 7;
+const usageWidthValue = v => Number.isInteger(v) && v >= 280 && v <= 560 && v % 20 === 0 ? v : 360;
+let usageCardMin = usageWidthValue(kept("usageCardMinWidth", 360));
 let usagePacked = null, usagePackFrame = 0;
+function setUsageCardMin(value) {
+  usageCardMin = usageWidthValue(value);
+  usagePacked = null;
+  if (!usagePackFrame) usagePackFrame = requestAnimationFrame(packUsage);
+}
+addEventListener("storage", e => {
+  if (e.key === "magpie.usageCardMinWidth") setUsageCardMin(kept("usageCardMinWidth", 360));
+});
 function packUsage() {
   const list = $("#subscriptionUsage");
   if (usagePackFrame) { cancelAnimationFrame(usagePackFrame); usagePackFrame = 0; }
   if (!list || list.classList.contains("sorting")) return;
+  list.style.setProperty("--usage-card-min", usageCardMin + "px");
   const cards = [...list.children], width = list.clientWidth;
   if (!width || !cards.length) {
     // out of sight: the grid as it is without packing, packed once it shows
@@ -16268,7 +16279,7 @@ function packUsage() {
     return;
   }
   const keys = cards.map((c) => c.dataset.key || "").join();
-  const most = Math.max(1, Math.min(cards.length, Math.floor((width + USAGE_GAP) / (USAGE_MIN + USAGE_GAP))));
+  const most = Math.max(1, Math.min(cards.length, Math.floor((width + USAGE_GAP) / (usageCardMin + USAGE_GAP))));
   const place = (n, hs) => {
     const ends = Array(n).fill(0), at = [];
     for (const h of hs.map(Math.ceil)) {
@@ -16505,7 +16516,7 @@ function quotaLines(sub) {
     const name = w.pool ? w.pool + " · " + w.name : w.name;
     const l = h.lines.find((x) => x.name === name);
     if (!l?.points?.length || out.some((x) => x.name === l.name)) continue;
-    out.push({ name, label: w.pool ? w.pool + " · " + t(w.name) : t(w.name), window: w, points: quotaPoints(l) });
+    out.push({ name, label: w.pool ? w.pool + " · " + t(w.name) : t(w.name), window: w, points: quotaPoints(l), series: out.length % 7 });
   }
   return out;
 }
@@ -16716,7 +16727,7 @@ function drawQuotaPlot(g, lines, x0, x1, w, h, now, thin) {
   const X = (t) => ((t - x0) / (x1 - x0)) * w;
   lines.forEach((l, i) => {
     // data-series is the window's colour, and in colorblind mode its dash
-    const s = i % 7, color = `var(--c${s + 1})`;
+    const s = l.series ?? i % 7, color = `var(--c${s + 1})`;
     const c = l.cycle || quotaCycle(l, now);
     // a window far shorter than the span (a 5-hour one over a week) is
     // drawn faint, without its even burn, an all but upright dash
@@ -16747,83 +16758,12 @@ function quotaCurve(sub) {
   if (quotaRange === "off") return null;
   const lines = quotaLines(sub);
   if (!lines.length) return null;
-  const box = el("div", "quota-curve");
-  const head = el("div", "qc-head");
-  const range = el("button", "text qc-range");
-  range.type = "button";
-  const key = usageAcctKey(sub);
-  const pace = el("span", "qc-pace");
-  head.append(el("span", "", t("Left over time")), pace, range);
-  const W = 300, H = 60;
-  const g = sv("svg", { viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: "none", class: "qc-plot", role: "img" });
-  curveZoom(box, g);
-  const axis = el("div", "qc-axis");
-  const legend = el("div", "qc-legend");
-  const drawLegend = (shown, now) => {
-    legend.replaceChildren();
-    shown.forEach((l, i) => {
-      const k = el("span", "qc-key");
-      const s = i % 7, color = `var(--c${s + 1})`;
-      k.dataset.series = s;
-      const sw = el("i");
-      sw.style.background = color;
-      // colorblind mode shows this for the dot: the window's line in its dash
-      const sample = sv("svg", { class: "qc-sample", viewBox: "0 0 22 6", "aria-hidden": "true" });
-      sample.append(sv("line", { x1: 1, y1: 3, x2: 21, y2: 3, class: "qc-dash", "data-series": s }, { stroke: color }));
-      const last = l.points[l.points.length - 1];
-      if (!last) return;
-      k.append(sw, sample, el("span", "", l.label), el("b", "", Math.round(last.left) + "%"));
-      k.title = [t("{name}: {n} left, read {when}", { name: l.label, n: Math.round(last.left) + "%", when: quotaTimeText(last.at, now) }),
-        "", t("Latest readings:"), ...quotaReadings(l, now)].join("\n");
-      legend.append(k);
-    });
-  };
-  box.draw = () => {
-    const now = Date.now();
-    const past = quotaPastCycles(lines, now);
-    const history = quotaHistoryView(sub, lines, now);
-    const picked = history?.picked;
-    const [x0, x1] = picked ? [picked.start, picked.end] : quotaSpan(lines, quotaRange, now);
-    // Keep only readings of the selected cycle. In particular, a refill
-    // at its end belongs to the next cycle, not this cycle's last figure.
-    const shown = history?.shown || lines;
-    drawQuotaPlot(g, shown, x0, Math.max(x0 + 1, x1), W, H, now);
-    box.title = quotaCurveTitle();
-    const r = picked ? t("Past cycle") : t(quotaRange === "2d" ? "2 days" : "Cycle");
-    range.textContent = r;
-    range.disabled = quotaRange !== "cycle" || !past.cycles.length;
-    range.title = t("Choose a recorded cycle");
-    range.setAttribute("aria-label", t("Choose a recorded cycle"));
-    if (!range.disabled) range.append(svg(CHEV, 9, 1.6));
-    range.onclick = (e) => {
-      e.stopPropagation();
-      if (range.classList.contains("open")) return closeProtoMenu();
-      openProtoMenu(range, [{ v: "", name: "Cycle", note: "The current cycle, from the window's start to its reset" }, ...past.cycles.map((c) => ({
-        v: c.id, name: quotaCycleDate(c.start) + " – " + quotaCycleDate(c.end), literalName: true, note: t("Recorded duration: {duration}", { duration: quotaCycleLength(c) }),
-      }))], picked?.id || "", (id) => { if (id) quotaCyclePicks.set(key, id); else quotaCyclePicks.delete(key); renderQuotas(); }, "Choose a recorded cycle", "sess-menu");
-    };
-    g.setAttribute("aria-label", t("Left over time") + " · " + r);
-    axis.replaceChildren(el("span", "", picked ? quotaCycleDate(x0) : quotaTimeText(x0, now)), el("span", "", picked ? quotaCycleDate(x1) : quotaTimeText(x1, now)));
-    drawLegend(shown, now);
-    // The window whose deadline is furthest off answers for the card: the
-    // head has room for the pace a shape in 52px only hints at (#2079). It
-    // is the window the legend's last key is, and a window with no readings
-    // of the picked cycle carries a cycle of nothing to be asked about. A
-    // past cycle picked has no pace to tell: it is over.
-    let longest = null, latest = -Infinity;
-    if (!picked) shown.forEach((l) => {
-      const c = l.cycle || quotaCycle(l, now);
-      if (c?.reset != null && c.reset > latest) { latest = c.reset; longest = l; }
-    });
-    const p = longest ? quotaEta(longest, now) : null;
-    pace.textContent = p ? quotaEtaText(longest, now) : "";
-    // which window it is, and the instant with its year, behind a line
-    // that holds day and minute and is cut short rather than wrapped
-    pace.title = p ? tipLines(shown.length > 1 ? longest.label : "", pace.textContent, p.out != null ? new Date(p.out).toLocaleString(intlLang()) : "") : "";
-  };
-  box.append(head, g, axis, legend);
-  box.draw();
-  return box;
+  if (window.quotaCurveDraw) return quotaCurveDraw(sub, lines);
+  quotaCurveModule();
+  return null;
+}
+function quotaCurveModule() {
+  return quotaCurveModule.p ||= import("./quotacurve.js").then(() => { usagePacked = null; renderQuotas(); }, statusErr);
 }
 // curveZoom: a curve made larger on a click, or Enter, and back on the
 // next (TJHHHH on Discord); the page stays where it is
@@ -16832,8 +16772,10 @@ function curveZoom(box, g) {
   g.setAttribute("aria-expanded", "false");
   const flip = (e) => {
     e.stopPropagation();
+    if (box.readTouch && box.classList.contains("big")) { box.readTouch = false; return; }
     const big = box.classList.toggle("big");
     g.setAttribute("aria-expanded", String(big));
+    box.onzoom?.(big);
   };
   g.addEventListener("click", flip);
   g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(e); } });
@@ -19448,7 +19390,7 @@ function applyPrefs(s, rate) {
     else delete root.dataset.colorblind;
     // a curve drawn already keeps its lines (CSS dashes them), but its
     // tooltip says which mode it was drawn in
-    for (const b of document.querySelectorAll(".quota-curve:not(.balance-curve)")) b.title = quotaCurveTitle();
+    for (const b of document.querySelectorAll(".quota-curve:not(.balance-curve)")) b.title = b.curveTitle?.() || quotaCurveTitle();
   }
   applyPrefs.ready = true;
   // accounts hidden while personal data is masked, until chosen otherwise

@@ -937,7 +937,7 @@ body.window .field.solo { grid-column: auto; }
 .usage-range-menu svg { flex: none; color: var(--muted); transition: transform .15s var(--ease); }
 .usage-range-menu.open svg { transform: rotate(180deg); }
 .usage-range-menu:disabled { opacity: .55; }
-.subscription-usage { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); align-items: start; gap: 7px; margin-bottom: 8px; flex: none; }
+.subscription-usage { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--usage-card-min, 360px)), 1fr)); align-items: start; gap: 7px; margin-bottom: 8px; flex: none; }
 /* packed into columns (packUsage): each card as tall as itself, placed on
    rows a pixel high, the gap between cards in its place on them (#860) */
 .subscription-usage.packed { grid-auto-rows: 1px; row-gap: 0; }
@@ -978,8 +978,8 @@ body.window .field.solo { grid-column: auto; }
 .quota-windows.brief { row-gap: 5px; }
 .quota-windows.brief .quota-reset { display: none; }
 .quota-windows.brief .quota-labels { margin-bottom: 3px; }
-.subscription-account .plan { margin-left: auto; flex: none; font-size: 10.5px; color: var(--muted); text-transform: capitalize; }
-.subscription-head .plan { margin-left: auto; font-size: 10.5px; color: var(--muted); text-transform: capitalize; }
+.subscription-account .plan { margin-left: auto; flex: 0 1 auto; min-width: 0; overflow-wrap: anywhere; text-align: right; font-size: 10.5px; color: var(--muted); text-transform: capitalize; }
+.subscription-head .plan { margin-left: auto; min-width: 0; overflow-wrap: anywhere; text-align: right; font-size: 10.5px; color: var(--muted); text-transform: capitalize; }
 .quota-windows { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px 14px; }
 /* when one window's names wrap, the bars beside it still line up: its
    names are as tall as the tallest beside them (fitQuota). The windows
@@ -1058,6 +1058,19 @@ body.window .field.solo { grid-column: auto; }
 /* what was left over time (#651): a line a window, an even burn dashed, now
    upright; the range (or Off) is picked once, in the allowances' head */
 .quota-head .quota-trend { margin-right: 8px; }
+.quota-head #usageLayout { margin-right: 8px; }
+#view-usage .row-head.quota-head { height: auto; min-height: 26px; flex-wrap: wrap; row-gap: 4px; }
+.usage-layout { width: min(320px, calc(100vw - 16px)); padding: 14px; gap: 10px; overflow-y: auto; }
+.usage-layout label { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--fg-2); }
+.usage-layout output { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.usage-layout input[type="range"] { flex: none; display: block; width: 100%; height: 28px; margin: 0; accent-color: var(--accent); }
+.usage-layout input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.usage-layout .ul-presets { display: flex; gap: 6px; }
+.usage-layout .ul-preset { flex: 1; min-width: 0; padding: 6px 4px; border-radius: 6px; background: var(--pill); color: var(--fg-2); font: inherit; font-size: 12px; }
+.usage-layout .ul-preset[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+.usage-layout .ul-preset small { display: block; font-size: 10.5px; opacity: .85; }
+.usage-layout .ul-measure, .usage-layout .ul-note { font-size: 11px; color: var(--muted); overflow-wrap: anywhere; }
+.usage-layout .ul-measure { font-variant-numeric: tabular-nums; }
 .quota-curve { margin-top: 10px; }
 .quota-curve .qc-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; font-size: 10.5px; color: var(--muted); }
 .quota-curve .qc-range { font-size: 10px; color: var(--muted); }
@@ -1087,6 +1100,25 @@ body.window .field.solo { grid-column: auto; }
 .qc-key > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .qc-key i { flex: none; width: 7px; height: 7px; border-radius: 50%; }
 .qc-key b { color: var(--fg-2); font-weight: 600; font-variant-numeric: tabular-nums; }
+/* The existing legend chooses windows without adding a second toolbar. */
+.quota-curve button.qc-key { padding: 0; border: 0; border-radius: 3px; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.quota-curve button.qc-key[aria-pressed="false"] { opacity: .5; }
+.quota-curve button.qc-key[aria-pressed="false"] > span { text-decoration: line-through; }
+.quota-curve button.qc-key:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.qc-controls { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-top: 5px; }
+.quota-curve .qc-controls .qc-legend { flex: 1; margin-top: 0; }
+.qc-scale-mode { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; font-size: 10.5px; color: var(--muted); white-space: nowrap; cursor: pointer; }
+.qc-scale-mode input { margin: 0; width: 12px; height: 12px; accent-color: var(--accent); }
+.qc-scale-note { margin-top: 5px; color: var(--muted); font-size: 10.5px; }
+.qc-relative .qc-cursor { stroke-dasharray: none; }
+.qc-chart { position: relative; }
+.quota-curve.big .qc-chart .qc-plot { margin-left: 32px; width: calc(100% - 32px); }
+.qc-detail { display: flex; align-items: flex-start; gap: 8px; margin-top: 6px; font-size: 10.5px; color: var(--muted); }
+.qc-scale { position: absolute; top: 0; left: 0; height: 168px; display: flex; flex-direction: column; justify-content: space-between; font-size: 10px; font-variant-numeric: tabular-nums; pointer-events: none; }
+.qc-readings { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.quota-curve .qc-close { flex: none; padding: 0; font: inherit; }
+.qc-cursor { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; pointer-events: none; }
+.qc-point { pointer-events: none; }
 /* colorblind mode (#2073): each quota window's line keeps a dash of its own,
    and its legend shows a sample of that line for the dot; the even paces go
    dotted, so no window's dash reads as one. Only drawQuotaPlot and the

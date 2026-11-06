@@ -133,6 +133,9 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
       const errors = [];
       const open = async (name, data, width) => {
         const page = await (await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: "reduce" })).newPage();
+        // Keep these packing fixtures compact; usage-card-width checks the
+        // 360px default and every available width preference.
+        await page.addInitScript(() => localStorage.setItem("magpie.usageCardMinWidth", "280"));
         pages.push([name, page]);
         page.setDefaultTimeout(5000);
         page.setDefaultNavigationTimeout(60000);
